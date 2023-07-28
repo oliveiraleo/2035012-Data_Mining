@@ -146,7 +146,13 @@ def remove_some_features(features_to_remove):
     NOTE: Input should be always a list"""
     for i in features_to_remove: # always treat features_to_remove as a list
         del data[i] # removes column 'i'
-    print(data) #DEBUG
+    # print(data) # DEBUG
+
+def combine_completion_years():
+    "TODO"
+    combined_data = data["12th Completion year"].astype(int) - data["10th Completion Year"].astype(int)
+    # print(combined_data.to_numpy) # DEBUG
+    data.insert(9, "10th and 12th Completion Years Diff", combined_data, True)
 
 def preprocess_data():
     "Calls all the auxiliary functions that apply preprocessing techniques on the data"
@@ -159,13 +165,10 @@ def preprocess_data():
     remove_leading_char_from_column("Year of Completion of college")
     # print(data[["Candidate ID", "Year of Birth", "10th Completion Year", "12th Completion year", "Year of Completion of college"]]) # DEBUG
     change_MD_to_average() # Except for the last column which will be treated later on
+    combine_completion_years() # Records only the difference between the 10th and 12th completion years
     # Removes some features to reduce the data's dimensionality
-    features_to_be_removed = ["Name"]
+    features_to_be_removed = ["Name", "Number of characters in Original Name", "10th Completion Year", "12th Completion year"]
     remove_some_features(features_to_be_removed)
-    #TODO Remove the feature Number of characters in Original Name (maybe)
-    # features_to_be_removed = ["Name", "Number of characters in Original Name"]
-    #TODO Combine 10th Completion Year & 12th Completion year features using only the difference between them
-    #TODO Create a way to save the data after preprocessing (perhaps with data.to_csv)
 
 def main():
     pass
@@ -184,7 +187,7 @@ def main():
     # Preprocess the data
     preprocess_data() # TODO Enable this to preprocess the input data
 
-    data.to_csv("./Tasks/Task2-Getting_to_know_your_data/results/data-after-preprocessing.csv", index=False)
+    data.to_csv("./Tasks/Task2-Getting_to_know_your_data/results/data-after-preprocessing.csv", index=False) # Saves the data without the index numbers
     
 # Calls the main functionallity
 if __name__ == "__main__":
