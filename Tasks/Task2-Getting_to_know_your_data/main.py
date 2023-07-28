@@ -169,11 +169,11 @@ def preprocess_data():
 
 def main():
     pass
-    # print(data.columns.values)
     # a = data[" 10th percentage"]
     # print(a)
     # get_some_statistics_from_feature(a)
     # get_some_statistics_from_feature(data[["Quantitative Ability 1", "Analytical Skills 1"]]) # ERROR because of str inside these features
+                                                                                              # needs to treat that before calling this
     
     # Get some insights regarding the data
     # count_diferent_genders()
@@ -182,7 +182,9 @@ def main():
     # count_relationship_between_degree_and_specialization()
     
     # Preprocess the data
-    # preprocess_data() # TODO Enable this to preprocess the input data
+    preprocess_data() # TODO Enable this to preprocess the input data
+
+    data.to_csv("./Tasks/Task2-Getting_to_know_your_data/results/data-after-preprocessing.csv", index=False)
     
 # Calls the main functionallity
 if __name__ == "__main__":
