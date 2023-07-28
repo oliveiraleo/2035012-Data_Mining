@@ -21,4 +21,4 @@ y2 = p2(x)
 f = plt.figure() # creates one graph object
 plt.plot(x, y, "bo", x, y1, x, y2) # creates the desired graph
 plt.show()
-f.savefig("fig.pdf") # saves the graph in a PDF file
+f.savefig("./In-Class-Exercises-and-Examples/Class3/fig.pdf") # saves the graph in a PDF file
