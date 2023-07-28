@@ -7,12 +7,15 @@ import matplotlib.pyplot as plt
     The lines containing the keyword 'DEBUG' were commented out on the final version
     of the code
 '''
-
-# Global Vars
+###############
+# Global Vars #
+###############
 data = pd.read_csv("./Tasks/Task2-Getting_to_know_your_data/task2-data.csv")
 # print(data) #DEBUG
 
-# Useful auxiliary functions
+##############################
+# Useful auxiliary functions #
+##############################
 def remove_element_from_series(series, elem):
     "Removes any ocurrences of elem from the series given as input"
     new_series = series.loc[series != elem]
@@ -35,7 +38,9 @@ def return_month_number_from_abbreviation(abbreviation):
             'DEC': 12
     }[abbreviation]
 
-# Other functions
+###################
+# Other functions #
+###################
 def get_some_statistics_from_feature(feature):
     "Prints the minimum, average & maximum values from a given (feature) series or dataframe"
     print("[INFO] Getting some statistics from feature(s)")
@@ -49,6 +54,23 @@ def get_some_statistics_from_feature(feature):
         print("\n- Min val:\n", feature.min())
     except(TypeError):
         print("\n[ERROR] Could not obtain statistics probably because the feature's data wasn't (completely) numerical")
+
+def count_diferent_genders():
+    x = data["Gender"]
+    # print(x) #DEBUG
+
+    plt.figure(figsize=(3,5), dpi=150) # adjusts the size of the plots
+    plt.hist(x)
+    # plt.title("Types of gender available on the data base")
+    plt.title("Types of gender")
+    plt.xlabel("Gender")
+    plt.ylabel("# of instances")
+    xmin, xmax, ymin, ymax = plt.axis() # get axis values
+    plt.yticks(np.arange(0, (ymax + 1), 20))
+    plt.tight_layout()
+    plt.grid(True, axis='y', linestyle=':')
+    # plt.show() #DEBUG
+    plt.savefig('./Tasks/Task2-Getting_to_know_your_data/results/gender.pdf')
 
 def count_all_degrees_of_study():
     x = data["Degree of study"]
@@ -64,7 +86,6 @@ def count_all_degrees_of_study():
 
 def count_degrees_of_study_without_type_X():
     initial_series = data["Degree of study"]
-    # x = data["Degree of study"]
     x = remove_element_from_series(initial_series, 'X')
     # print(x) #DEBUG
 
@@ -104,6 +125,9 @@ def remove_leading_char_from_column(column_name):
         data.at[i,column_name] = modified_line_content # updates the line
 
 def change_MD_to_average():
+    """Replaces the 'MD' (Missing Data) occurrences with the average of the feature on the
+    desired columns.
+    NOTE: Only works with numerical features"""
     print("[INFO] Replacing the 'MD' occurrences with NaN on candidate skills' data")
     data.replace({"Quantitative Ability 1": 'MD', "Analytical Skills 1": 'MD'}, np.nan , inplace=True) # changes every 'MD' value to NaN on the specified features
     # Format the columns (features) accordingly
@@ -117,6 +141,13 @@ def change_MD_to_average():
             data[i].fillna(avg, inplace=True)
     print("[INFO] Done replacing")
 
+def remove_some_features(features_to_remove):
+    """ Deletes columns from a given list of names
+    NOTE: Input should be always a list"""
+    for i in features_to_remove: # always treat features_to_remove as a list
+        del data[i] # removes column 'i'
+    print(data) #DEBUG
+
 def preprocess_data():
     "Calls all the auxiliary functions that apply preprocessing techniques on the data"
     change_months_from_text_to_number() # Month is ordinal data in our context, so it makes more sense to use it as numbers instead of text(str)
@@ -128,8 +159,11 @@ def preprocess_data():
     remove_leading_char_from_column("Year of Completion of college")
     # print(data[["Candidate ID", "Year of Birth", "10th Completion Year", "12th Completion year", "Year of Completion of college"]]) # DEBUG
     change_MD_to_average() # Except for the last column which will be treated later on
-    #TODO Remove the feature Name
+    # Removes some features to reduce the data's dimensionality
+    features_to_be_removed = ["Name"]
+    remove_some_features(features_to_be_removed)
     #TODO Remove the feature Number of characters in Original Name (maybe)
+    # features_to_be_removed = ["Name", "Number of characters in Original Name"]
     #TODO Combine 10th Completion Year & 12th Completion year features using only the difference between them
     #TODO Create a way to save the data after preprocessing (perhaps with data.to_csv)
 
@@ -142,9 +176,10 @@ def main():
     # get_some_statistics_from_feature(data[["Quantitative Ability 1", "Analytical Skills 1"]]) # ERROR because of str inside these features
     
     # Get some insights regarding the data
+    # count_diferent_genders()
     # count_all_degrees_of_study()
     # count_degrees_of_study_without_type_X()
-    count_relationship_between_degree_and_specialization()
+    # count_relationship_between_degree_and_specialization()
     
     # Preprocess the data
     # preprocess_data() # TODO Enable this to preprocess the input data
