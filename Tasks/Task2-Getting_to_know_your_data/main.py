@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import sklearn.preprocessing as skp
 
 ''' 
     That's the source code used on the Task 2
@@ -189,6 +190,24 @@ def combine_completion_years():
     # print(combined_data.to_numpy) # DEBUG
     data.insert(9, "10th and 12th Completion Years Diff", combined_data, True)
 
+def normalize_feature(feature_name):
+    """Normalizes a feature in the interval [0 , 1]
+    NOTE: Input should always be one str (i.e. feature name to be normalized)
+    """
+    feature = data[[feature_name]] # creates a df containing only one feature
+
+    try:
+        scaler = skp.MinMaxScaler()
+        feature_tmp = pd.DataFrame( scaler.fit_transform(feature), columns=feature.columns )
+        # print(feature_tmp) #DEBUG
+    except(ValueError):
+        print("[ERROR] The scaler requires at least two columns to work. Please, check your dataFrame")
+
+    index_to_be_replaced = data.columns.get_loc(feature_name) # gets the column index to be replaced
+    data.insert(index_to_be_replaced, "tmp", feature_tmp, True) # adds the new column data to the data
+    remove_some_features([feature_name]) # removes the old column data
+    data.rename(columns={"tmp":feature_name}, inplace=True) # renames the tmp column to the old name
+
 def preprocess_data():
     "Calls all the auxiliary functions that apply preprocessing techniques on the data"
     change_months_from_text_to_number() # Month is ordinal data in our context, so it makes more sense to use it as numbers instead of text(str)
@@ -197,16 +216,16 @@ def preprocess_data():
     remove_leading_char_from_column("Year of Birth")
     remove_leading_char_from_column("10th Completion Year")
     remove_leading_char_from_column("12th Completion year")
-    remove_leading_char_from_column("Year of Completion of college")
     # print(data[["Candidate ID", "Year of Birth", "10th Completion Year", "12th Completion year", "Year of Completion of college"]]) # DEBUG
     change_MD_to_average() # Except for the last column which will be treated later on
     combine_completion_years() # Records only the difference between the 10th and 12th completion years
     # Removes some features to reduce the data's dimensionality
-    features_to_be_removed = ["Name", "Number of characters in Original Name", "10th Completion Year", "12th Completion year"]
+    features_to_be_removed = ["Name", "Number of characters in Original Name", "10th Completion Year", "12th Completion year", "Year of Completion of college"]
     remove_some_features(features_to_be_removed)
-    #TODO normalize Year of Completion of college
-    #TODO normalize College percentage
-    #TODO normalize 10th percentage and 12th percentage ?
+    normalize_feature("10th percentage")
+    normalize_feature("12th percentage")
+    normalize_feature("College percentage")
+    #TODO delete or treat all instances with 'MD' in Performance
 
 def main():
     pass
