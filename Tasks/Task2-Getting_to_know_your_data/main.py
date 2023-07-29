@@ -38,6 +38,12 @@ def return_month_number_from_abbreviation(abbreviation):
             'DEC': 12
     }[abbreviation]
 
+def save_figure_on_disk(plot, file_name):
+    "Saves a figure/plot on the results folder"
+    file_path = "./Tasks/Task2-Getting_to_know_your_data/results/" + str(file_name)
+    print("[INFO] Saving the figure", file_name)
+    plot.savefig(file_path)
+    print("[INFO] The figure was sucessfully saved at\n[INFO]", file_path)
 ###################
 # Other functions #
 ###################
@@ -66,7 +72,7 @@ def count_diferent_genders():
     plt.title("Genders in the data set")
     plt.tight_layout()
     # plt.show() #DEBUG
-    fig.savefig('./Tasks/Task2-Getting_to_know_your_data/results/genders.pdf')
+    save_figure_on_disk(fig, "genders.pdf")
 
 def count_diferent_locations():
     "Plots a bar graph containing the location data frequency"
@@ -95,7 +101,7 @@ def count_diferent_locations():
     for i, v in enumerate(y): # writes the labels on top of each column
         plt.text(xlocs[i], v, str(v), horizontalalignment="center", verticalalignment="bottom")
     # plt.show() #DEBUG
-    plt.savefig("./Tasks/Task2-Getting_to_know_your_data/results/locations.pdf")
+    save_figure_on_disk(plt, "locations.pdf")
 
 def count_all_degrees_of_study():
     x = data["Degree of study"]
