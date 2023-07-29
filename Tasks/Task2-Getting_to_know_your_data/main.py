@@ -108,12 +108,13 @@ def count_all_degrees_of_study():
     # print(x) #DEBUG
 
     plt.hist(x)
-    plt.title("Number of occurences of the types of study degree")
-    plt.xlabel("Degree of study")
+    plt.title("Types of study degree")
+    plt.xlabel("Degree of study code")
     plt.ylabel("# of instances")
-    plt.yticks(np.arange(0, (x.size)+1, 25))
-    plt.show() #TODO adjust the size of the graph
-    #TODO save the figures somewhere
+    plt.yticks(np.arange(0, (x.size)+1, 50))
+    # plt.show() #DEBUG
+    save_figure_on_disk(plt, "degrees_of_study.pdf")
+    plt.close('all') # closes the current plots
 
 def count_degrees_of_study_without_type_X():
     initial_series = data["Degree of study"]
@@ -121,18 +122,21 @@ def count_degrees_of_study_without_type_X():
     # print(x) #DEBUG
 
     plt.hist(x)
-    plt.title("Occurences of study degrees with a low number of instances")
+    plt.title("Types of study degrees with few instances")
     plt.xlabel("Degree of study")
     plt.ylabel("# of instances")
     plt.yticks(np.arange(0, (x.size)+1))
-    plt.show() #TODO adjust the size of the graph
-    #TODO save the figures somewhere
+    # plt.show() #DEBUG
+    save_figure_on_disk(plt, "degrees_of_study_small_scale.pdf")
+    plt.close('all') # closes the current plots
 
 def count_relationship_between_degree_and_specialization():
     data.hist("Specialization in study", by="Degree of study") #TODO maybe split the data in 3 diff graphs
     plt.show() #TODO adjust the size of the graph
     #TODO insert some labels on axis to make them more clear to read
     #TODO save the figures somewhere
+    # save_figure_on_disk(plt, "relationship_between_degree_of_study_and_specialization.pdf")
+    plt.close('all') # closes the current plots
 
 def remove_leading_spaces_from_column_names():
     data.rename({' Year of Completion of college': 'Year of Completion of college',
@@ -206,6 +210,7 @@ def preprocess_data():
 
 def main():
     pass
+    # Example on how to consult statistics of some feature
     # a = data[" 10th percentage"]
     # print(a)
     # get_some_statistics_from_feature(a)
