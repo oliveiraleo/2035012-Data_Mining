@@ -56,21 +56,46 @@ def get_some_statistics_from_feature(feature):
         print("\n[ERROR] Could not obtain statistics probably because the feature's data wasn't (completely) numerical")
 
 def count_diferent_genders():
-    x = data["Gender"]
+    "Plots a pie chart graph containing the present genders"
+    labels = data["Gender"].unique()
+    x = data.groupby(["Gender"]).size()
     # print(x) #DEBUG
 
-    plt.figure(figsize=(3,5), dpi=150) # adjusts the size of the plots
-    plt.hist(x)
-    # plt.title("Types of gender available on the data base")
-    plt.title("Types of gender")
-    plt.xlabel("Gender")
-    plt.ylabel("# of instances")
-    xmin, xmax, ymin, ymax = plt.axis() # get axis values
-    plt.yticks(np.arange(0, (ymax + 1), 20))
+    fig = plt.figure(figsize=(3,3), dpi=150) # adjusts the size of the plots
+    plt.pie(x, labels = labels, autopct='%1.1f%%')
+    plt.title("Genders in the data set")
     plt.tight_layout()
-    plt.grid(True, axis='y', linestyle=':')
     # plt.show() #DEBUG
-    plt.savefig('./Tasks/Task2-Getting_to_know_your_data/results/gender.pdf')
+    fig.savefig('./Tasks/Task2-Getting_to_know_your_data/results/genders.pdf')
+
+def count_diferent_locations():
+    "Plots a bar graph containing the location data frequency"
+    x = data["State (Location)"].sort_values().unique() # sort to give alphabetical order, unique to avoid duplicates
+    y = data.groupby(["State (Location)"]).size() # size gives the number of occurrences for each state
+    total_instances = y.sum()
+    # total_instances = len(data["State (Location)"].index) #TODO investigate if this is fastest for larger data
+    # print(x) #DEBUG
+    # print(y) #DEBUG
+    # print(total_instances) #DEBUG
+
+    y_axis_labels = []
+    for i in y: # calculates the percentage for each occurrence
+        y_axis_labels.append(float('{:.2f}'.format((i / total_instances)*100))) # stores it on y_axis_labels list
+
+    y_axis_labels = np.sort(y_axis_labels) # sorts the data in order to display it correctly on the plot
+
+    plt.figure(figsize=(8,11), dpi=200) # adjusts the size of the plots
+    plt.tight_layout()
+    plt.bar(x, y)
+    plt.grid(True, axis='y', linestyle=':')
+    plt.yticks(np.unique(y), labels=np.unique(y_axis_labels)) # unique was added to avoid printing more than once the same label
+    plt.ylabel("Frequency of occurence (%)")
+    plt.xlabel("State / Location codes")
+    xlocs, xlabs = plt.xticks() # gets some parameters from the xticks
+    for i, v in enumerate(y): # writes the labels on top of each column
+        plt.text(xlocs[i], v, str(v), horizontalalignment="center", verticalalignment="bottom")
+    # plt.show() #DEBUG
+    plt.savefig("./Tasks/Task2-Getting_to_know_your_data/results/locations.pdf")
 
 def count_all_degrees_of_study():
     x = data["Degree of study"]
@@ -169,6 +194,9 @@ def preprocess_data():
     # Removes some features to reduce the data's dimensionality
     features_to_be_removed = ["Name", "Number of characters in Original Name", "10th Completion Year", "12th Completion year"]
     remove_some_features(features_to_be_removed)
+    #TODO normalize Year of Completion of college
+    #TODO normalize College percentage
+    #TODO normalize 10th percentage and 12th percentage ?
 
 def main():
     pass
@@ -180,14 +208,15 @@ def main():
     
     # Get some insights regarding the data
     # count_diferent_genders()
+    # count_diferent_locations()
     # count_all_degrees_of_study()
     # count_degrees_of_study_without_type_X()
     # count_relationship_between_degree_and_specialization()
     
     # Preprocess the data
-    preprocess_data() # TODO Enable this to preprocess the input data
+    # preprocess_data() # TODO Enable this to preprocess the input data
 
-    data.to_csv("./Tasks/Task2-Getting_to_know_your_data/results/data-after-preprocessing.csv", index=False) # Saves the data without the index numbers
+    # data.to_csv("./Tasks/Task2-Getting_to_know_your_data/results/data-after-preprocessing.csv", index=False) # Saves the data without the index numbers
     
 # Calls the main functionallity
 if __name__ == "__main__":
