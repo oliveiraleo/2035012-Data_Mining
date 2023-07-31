@@ -139,8 +139,8 @@ def count_relationship_between_degree_and_specialization():
         y = df.groupby(["Specialization in study"]).size() # size gives the number of occurrences for each state
         plt.bar(x, y)
         plt.title("Degree of study: " + i)
-        plt.xlabel("# of occurrencies")
-        plt.ylabel("Specialization in study")
+        plt.xlabel("Specialization in study")
+        plt.ylabel("# of occurrencies")
         save_figure_on_disk(plt, f"relationship_between_degree_of_study_and_specialization_{i}.pdf")
         plt.close('all') # closes the current plots
 
@@ -160,7 +160,7 @@ def change_months_from_text_to_number():
         data.at[i,"Month of Birth"] = return_month_number_from_abbreviation(month_abbr[i])
     # print(data["Month of Birth"]) #DEBUG
 
-def plot_boxplot_on_scores(status):
+def plot_boxplot_on_scores():
     columns_to_plot = data["English 1"], data["English 2"], data["English 3"], data["English 4"], data["Quantitative Ability 1"], data["Quantitative Ability 2"], data["Quantitative Ability 3"], data["Quantitative Ability 4"], data["Domain Skills 1"], data["Domain Skills 2"], data["Domain Test 3"], data["Domain Test 4"], data["Analytical Skills 1"], data["Analytical Skills 2"], data["Analytical Skills 3"]
 
     labels = ["English 1", "English 2", "English 3", "English 4",
@@ -175,12 +175,8 @@ def plot_boxplot_on_scores(status):
     plt.xticks(ticks=list(range(1, len(labels)+1)), labels=labels, rotation=20)
     # As the boxplots will be genarated twice to confirm the removal of some outliers
     # it's required to rename the files so they don't get confused or overwritten
-    if(status == "before"):
-        plt.title("Scores after removing \"MD\" instances")
-        save_figure_on_disk(fig, "score_box_plots_before_removing_0s.pdf")
-    if(status == "after"):
-        plt.title("Scores after removing \"MD\" & \"score = 0\" instances")
-        save_figure_on_disk(fig, "score_box_plots_after_removing_0s.pdf")
+    plt.title("\"Score\" features after preprocessing data")
+    save_figure_on_disk(fig, "score_box_plots_after_preprocessing.pdf")
     plt.close('all')
 
 def remove_leading_char_from_column(column_name):
@@ -240,12 +236,13 @@ def drop_instances_from_feature_containing_keyword(feature, keyword):
     global data # creates a "link" between the data var of this function and the data global var
     data = data[data[str(feature)].str.contains(str(keyword))==False] # gen the new data and updates the global var
 
-def drop_instances_from_feature_containing_int(feature, number):
-    global data # creates a "link" between the data var of this function and the data global var
-    data = data[data[feature] != number]
+# def drop_instances_from_feature_containing_int(feature, number):
+#     global data # creates a "link" between the data var of this function and the data global var
+#     data = data[data[feature] != number]
 
 def preprocess_data():
     "Calls all the auxiliary functions that apply preprocessing techniques on the data"
+    print("[INFO] Data preprocessing initiated...")
     change_months_from_text_to_number() # Month is ordinal data in our context, so it makes more sense to use it as numbers instead of text(str)
     remove_leading_spaces_from_column_names() # Some columns had leading spaces on their names, so I removed it
     # Some columns had a character in the beginning of each feature instance, so I removed it
@@ -258,23 +255,25 @@ def preprocess_data():
     # Removes some features to reduce the data's dimensionality
     features_to_be_removed = ["Name", "Number of characters in Original Name", "10th Completion Year", "12th Completion year", "Year of Completion of college"]
     remove_some_features(features_to_be_removed)
-    drop_instances_from_feature_containing_keyword("Performance", "MD")
     # Creates the boxplots and removes the outliers of the "scores"
-    plot_boxplot_on_scores("before")
-    features_to_remove_int = ["English 1", "English 2", "English 3", "English 4",
+    plot_boxplot_on_scores()
+    features_to_normalize = ["English 1", "English 2", "English 3", "English 4",
     "Quantitative Ability 1", "Quantitative Ability 2", "Quantitative Ability 3", "Quantitative Ability 4",
     "Domain Skills 1", "Domain Skills 2", "Domain Test 3", "Domain Test 4",
-    "Analytical Skills 1", "Analytical Skills 2", "Analytical Skills 3"]
-    for i in features_to_remove_int:
-        drop_instances_from_feature_containing_int(i, 0)
-    plot_boxplot_on_scores("after")
+    "Analytical Skills 1", "Analytical Skills 2", "Analytical Skills 3",
+    "10th percentage", "12th percentage", "College percentage"]
+    # for i in features_to_remove_int:
+    #     drop_instances_from_feature_containing_int(i, 0)
+    # plot_boxplot_on_scores("after")
     # Normalizes some numerical data
-    features_to_normalize = features_to_remove_int
-    features_to_normalize.append("10th percentage")
-    features_to_normalize.append("12th percentage")
-    features_to_normalize.append("College percentage")
+    # features_to_normalize = features_to_remove_int
+    # features_to_normalize.append("10th percentage")
+    # features_to_normalize.append("12th percentage")
+    # features_to_normalize.append("College percentage")
     for i in features_to_normalize:
         normalize_feature(i)
+    drop_instances_from_feature_containing_keyword("Performance", "MD")
+    print("[INFO] Data preprocessing finished")
     
 def main():
     # Example on how to consult statistics of some feature
@@ -300,7 +299,10 @@ def main():
     # "Analytical Skills 1", "Analytical Skills 2", "Analytical Skills 3"]]
     # get_some_statistics_from_feature(a)
 
-    data.to_csv("./Tasks/Task2-Getting_to_know_your_data/results/data-after-preprocessing.csv", index=False) # Saves the data without the index numbers
+    path_to_save_data = "./Tasks/Task2-Getting_to_know_your_data/results/data-after-preprocessing.csv"
+    data.to_csv(path_to_save_data, index=False) # Saves the data without the index numbers
+    print("[INFO] Saved the data successfully at")
+    print("[INFO]", path_to_save_data)
     
 # Calls the main functionality
 if __name__ == "__main__":
