@@ -18,7 +18,7 @@ data = pd.read_csv("./Tasks/Task2-Getting_to_know_your_data/task2-data.csv")
 # Useful auxiliary functions #
 ##############################
 def remove_element_from_series(series, elem):
-    "Removes any ocurrences of elem from the series given as input"
+    "Removes any occurrences of elem from the series given as input"
     new_series = series.loc[series != elem]
     return new_series
 
@@ -44,7 +44,7 @@ def save_figure_on_disk(plot, file_name):
     file_path = "./Tasks/Task2-Getting_to_know_your_data/results/" + str(file_name)
     print("[INFO] Saving the figure", file_name)
     plot.savefig(file_path)
-    print("[INFO] The figure was sucessfully saved at\n[INFO]", file_path)
+    print("[INFO] The figure was successfully saved at\n[INFO]", file_path)
 ###################
 # Other functions #
 ###################
@@ -96,7 +96,7 @@ def count_diferent_locations():
     plt.tight_layout()
     plt.bar(x, y)
     plt.grid(True, axis='y', linestyle=':')
-    plt.yticks(np.unique(y), labels=np.unique(y_axis_labels)) # unique was added to avoid printing more than once the same label
+    plt.yticks(np.unique(y), labels=np.unique(y_axis_labels)) # unique was added to avoid printing the same label more than once
     plt.ylabel("Frequency of occurence (%)")
     plt.xlabel("State / Location codes")
     xlocs, xlabs = plt.xticks() # gets some parameters from the xticks
@@ -154,11 +154,34 @@ def remove_leading_spaces_from_column_names():
                  }, axis=1, inplace=True)
 
 def change_months_from_text_to_number():
-    # print(data["Month of Birth"]) # DEBUG
+    # print(data["Month of Birth"]) #DEBUG
     month_abbr = data["Month of Birth"] # gets only the desired column
     for i in range(len(data)):
         data.at[i,"Month of Birth"] = return_month_number_from_abbreviation(month_abbr[i])
-    # print(data["Month of Birth"]) # DEBUG
+    # print(data["Month of Birth"]) #DEBUG
+
+def plot_boxplot_on_scores(status):
+    columns_to_plot = data["English 1"], data["English 2"], data["English 3"], data["English 4"], data["Quantitative Ability 1"], data["Quantitative Ability 2"], data["Quantitative Ability 3"], data["Quantitative Ability 4"], data["Domain Skills 1"], data["Domain Skills 2"], data["Domain Test 3"], data["Domain Test 4"], data["Analytical Skills 1"], data["Analytical Skills 2"], data["Analytical Skills 3"]
+
+    labels = ["English 1", "English 2", "English 3", "English 4",
+    "Quantitative Ability 1", "Quantitative Ability 2", "Quantitative Ability 3", "Quantitative Ability 4",
+    "Domain Skills 1", "Domain Skills 2", "Domain Test 3", "Domain Test 4",
+    "Analytical Skills 1", "Analytical Skills 2", "Analytical Skills 3"]
+    
+    fig, ax = plt.subplots(figsize=(12,8))
+    ax.boxplot(columns_to_plot, vert=1)
+    plt.yticks(ticks=list(np.arange(0, 101, 5)))
+    plt.grid(True, axis='y', linestyle=':')
+    plt.xticks(ticks=list(range(1, len(labels)+1)), labels=labels, rotation=20)
+    # As the boxplots will be genarated twice to confirm the removal of some outliers
+    # it's required to rename the files so they don't get confused or overwritten
+    if(status == "before"):
+        plt.title("Scores after removing \"MD\" instances")
+        save_figure_on_disk(fig, "score_box_plots_before_removing_0s.pdf")
+    if(status == "after"):
+        plt.title("Scores after removing \"MD\" & \"score = 0\" instances")
+        save_figure_on_disk(fig, "score_box_plots_after_removing_0s.pdf")
+    plt.close('all')
 
 def remove_leading_char_from_column(column_name):
     for i in range(len(data)):
@@ -187,12 +210,12 @@ def remove_some_features(features_to_remove):
     NOTE: Input should be always a list"""
     for i in features_to_remove: # always treat features_to_remove as a list
         del data[i] # removes column 'i'
-    # print(data) # DEBUG
+    # print(data) #DEBUG
 
 def combine_completion_years():
-    "TODO"
+    "Takes the completion years features, combines them applying a difference and then adds the updated data on the data base"
     combined_data = data["12th Completion year"].astype(int) - data["10th Completion Year"].astype(int)
-    # print(combined_data.to_numpy) # DEBUG
+    # print(combined_data.to_numpy) #DEBUG
     data.insert(9, "10th and 12th Completion Years Diff", combined_data, True)
 
 def normalize_feature(feature_name):
@@ -221,29 +244,6 @@ def drop_instances_from_feature_containing_int(feature, number):
     global data # creates a "link" between the data var of this function and the data global var
     data = data[data[feature] != number]
 
-def plot_boxplot_on_scores(status):
-    pass
-    columns_to_plot = data["English 1"], data["English 2"], data["English 3"], data["English 4"], data["Quantitative Ability 1"], data["Quantitative Ability 2"], data["Quantitative Ability 3"], data["Quantitative Ability 4"], data["Domain Skills 1"], data["Domain Skills 2"], data["Domain Test 3"], data["Domain Test 4"], data["Analytical Skills 1"], data["Analytical Skills 2"], data["Analytical Skills 3"]
-
-    labels = ["English 1", "English 2", "English 3", "English 4",
-    "Quantitative Ability 1", "Quantitative Ability 2", "Quantitative Ability 3", "Quantitative Ability 4",
-    "Domain Skills 1", "Domain Skills 2", "Domain Test 3", "Domain Test 4",
-    "Analytical Skills 1", "Analytical Skills 2", "Analytical Skills 3"]
-    
-    # fig = plt.figure(figsize=(3,3), dpi=150) # adjusts the size of the plots
-    fig, ax = plt.subplots(figsize=(12,8))
-    ax.boxplot(columns_to_plot, vert=1)
-    plt.yticks(ticks=list(np.arange(0, 101, 5)))
-    plt.grid(True, axis='y', linestyle=':')
-    plt.xticks(ticks=list(range(1, len(labels)+1)), labels=labels, rotation=20)
-    if(status == "before"):
-        plt.title("Scores after removing \"MD\" instances")
-        save_figure_on_disk(fig, "score_box_plots_before_removing_0s.pdf")
-    if(status == "after"):
-        plt.title("Scores after removing \"MD\" & \"score = 0\" instances")
-        save_figure_on_disk(fig, "score_box_plots_after_removing_0s.pdf")
-    plt.close('all')
-
 def preprocess_data():
     "Calls all the auxiliary functions that apply preprocessing techniques on the data"
     change_months_from_text_to_number() # Month is ordinal data in our context, so it makes more sense to use it as numbers instead of text(str)
@@ -252,7 +252,7 @@ def preprocess_data():
     remove_leading_char_from_column("Year of Birth")
     remove_leading_char_from_column("10th Completion Year")
     remove_leading_char_from_column("12th Completion year")
-    # print(data[["Candidate ID", "Year of Birth", "10th Completion Year", "12th Completion year", "Year of Completion of college"]]) # DEBUG
+    # print(data[["Candidate ID", "Year of Birth", "10th Completion Year", "12th Completion year", "Year of Completion of college"]]) #DEBUG
     change_MD_to_average() # Except for the last column which will be treated later on
     combine_completion_years() # Records only the difference between the 10th and 12th completion years
     # Removes some features to reduce the data's dimensionality
@@ -273,12 +273,10 @@ def preprocess_data():
     features_to_normalize.append("10th percentage")
     features_to_normalize.append("12th percentage")
     features_to_normalize.append("College percentage")
-
     for i in features_to_normalize:
         normalize_feature(i)
     
 def main():
-    pass
     # Example on how to consult statistics of some feature
     # a = data[" 10th percentage"]
     # get_some_statistics_from_feature(a)
@@ -304,6 +302,6 @@ def main():
 
     data.to_csv("./Tasks/Task2-Getting_to_know_your_data/results/data-after-preprocessing.csv", index=False) # Saves the data without the index numbers
     
-# Calls the main functionallity
+# Calls the main functionality
 if __name__ == "__main__":
     main()
