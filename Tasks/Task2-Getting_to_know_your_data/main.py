@@ -132,12 +132,15 @@ def count_degrees_of_study_without_type_X():
     plt.close('all') # closes the current plots
 
 def count_relationship_between_degree_and_specialization():
-    data.hist("Specialization in study", by="Degree of study") #TODO maybe split the data in 3 diff graphs
-    plt.show() #TODO adjust the size of the graph
-    #TODO insert some labels on axis to make them more clear to read
-    #TODO save the figures somewhere
-    # save_figure_on_disk(plt, "relationship_between_degree_of_study_and_specialization.pdf")
-    plt.close('all') # closes the current plots
+    for i, df in data[["Degree of study", "Specialization in study"]].sort_values(by="Specialization in study").groupby("Degree of study"):
+        x = df["Specialization in study"].sort_values().unique() # sort to give alphabetical order, unique to avoid duplicates
+        y = df.groupby(["Specialization in study"]).size() # size gives the number of occurrences for each state
+        plt.bar(x, y)
+        plt.title("Degree of study: " + i)
+        plt.xlabel("# of occurrencies")
+        plt.ylabel("Specialization in study")
+        save_figure_on_disk(plt, f"relationship_between_degree_of_study_and_specialization_{i}.pdf")
+        plt.close('all') # closes the current plots
 
 def remove_leading_spaces_from_column_names():
     data.rename({' Year of Completion of college': 'Year of Completion of college',
@@ -208,6 +211,10 @@ def normalize_feature(feature_name):
     remove_some_features([feature_name]) # removes the old column data
     data.rename(columns={"tmp":feature_name}, inplace=True) # renames the tmp column to the old name
 
+def drop_instances_from_feature_containing_keyword(feature, keyword):
+    global data # creates a "link" between the data var of this function and the data global var
+    data = data[data[str(feature)].str.contains(str(keyword))==False] # gen the new data and updates the global var
+
 def preprocess_data():
     "Calls all the auxiliary functions that apply preprocessing techniques on the data"
     change_months_from_text_to_number() # Month is ordinal data in our context, so it makes more sense to use it as numbers instead of text(str)
@@ -225,28 +232,34 @@ def preprocess_data():
     normalize_feature("10th percentage")
     normalize_feature("12th percentage")
     normalize_feature("College percentage")
-    #TODO delete or treat all instances with 'MD' in Performance
-
+    drop_instances_from_feature_containing_keyword("Performance", "MD")
+    
+    
 def main():
     pass
     # Example on how to consult statistics of some feature
     # a = data[" 10th percentage"]
-    # print(a)
     # get_some_statistics_from_feature(a)
     # get_some_statistics_from_feature(data[["Quantitative Ability 1", "Analytical Skills 1"]]) # ERROR because of str inside these features
                                                                                               # needs to treat that before calling this
     
     # Get some insights regarding the data
-    # count_diferent_genders()
-    # count_diferent_locations()
-    # count_all_degrees_of_study()
-    # count_degrees_of_study_without_type_X()
-    # count_relationship_between_degree_and_specialization()
+    count_diferent_genders()
+    count_diferent_locations()
+    count_all_degrees_of_study()
+    count_degrees_of_study_without_type_X()
+    count_relationship_between_degree_and_specialization()
     
     # Preprocess the data
-    # preprocess_data() # TODO Enable this to preprocess the input data
+    preprocess_data()
+    
+    # a = data[["English 1", "English 2", "English 3", "English 4",
+    # "Quantitative Ability 1", "Quantitative Ability 2", "Quantitative Ability 3", "Quantitative Ability 4",
+    # "Domain Skills 1", "Domain Skills 2", "Domain Test 3", "Domain Test 4",
+    # "Analytical Skills 1", "Analytical Skills 2", "Analytical Skills 3"]]
+    # get_some_statistics_from_feature(a)
 
-    # data.to_csv("./Tasks/Task2-Getting_to_know_your_data/results/data-after-preprocessing.csv", index=False) # Saves the data without the index numbers
+    data.to_csv("./Tasks/Task2-Getting_to_know_your_data/results/data-after-preprocessing.csv", index=False) # Saves the data without the index numbers
     
 # Calls the main functionallity
 if __name__ == "__main__":
