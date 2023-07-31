@@ -74,6 +74,7 @@ def count_diferent_genders():
     plt.tight_layout()
     # plt.show() #DEBUG
     save_figure_on_disk(fig, "genders.pdf")
+    plt.close('all')
 
 def count_diferent_locations():
     "Plots a bar graph containing the location data frequency"
@@ -103,6 +104,7 @@ def count_diferent_locations():
         plt.text(xlocs[i], v, str(v), horizontalalignment="center", verticalalignment="bottom")
     # plt.show() #DEBUG
     save_figure_on_disk(plt, "locations.pdf")
+    plt.close('all')
 
 def count_all_degrees_of_study():
     x = data["Degree of study"]
@@ -215,6 +217,33 @@ def drop_instances_from_feature_containing_keyword(feature, keyword):
     global data # creates a "link" between the data var of this function and the data global var
     data = data[data[str(feature)].str.contains(str(keyword))==False] # gen the new data and updates the global var
 
+def drop_instances_from_feature_containing_int(feature, number):
+    global data # creates a "link" between the data var of this function and the data global var
+    data = data[data[feature] != number]
+
+def plot_boxplot_on_scores(status):
+    pass
+    columns_to_plot = data["English 1"], data["English 2"], data["English 3"], data["English 4"], data["Quantitative Ability 1"], data["Quantitative Ability 2"], data["Quantitative Ability 3"], data["Quantitative Ability 4"], data["Domain Skills 1"], data["Domain Skills 2"], data["Domain Test 3"], data["Domain Test 4"], data["Analytical Skills 1"], data["Analytical Skills 2"], data["Analytical Skills 3"]
+
+    labels = ["English 1", "English 2", "English 3", "English 4",
+    "Quantitative Ability 1", "Quantitative Ability 2", "Quantitative Ability 3", "Quantitative Ability 4",
+    "Domain Skills 1", "Domain Skills 2", "Domain Test 3", "Domain Test 4",
+    "Analytical Skills 1", "Analytical Skills 2", "Analytical Skills 3"]
+    
+    # fig = plt.figure(figsize=(3,3), dpi=150) # adjusts the size of the plots
+    fig, ax = plt.subplots(figsize=(12,8))
+    ax.boxplot(columns_to_plot, vert=1)
+    plt.yticks(ticks=list(np.arange(0, 101, 5)))
+    plt.grid(True, axis='y', linestyle=':')
+    plt.xticks(ticks=list(range(1, len(labels)+1)), labels=labels, rotation=20)
+    if(status == "before"):
+        plt.title("Scores after removing \"MD\" instances")
+        save_figure_on_disk(fig, "score_box_plots_before_removing_0s.pdf")
+    if(status == "after"):
+        plt.title("Scores after removing \"MD\" & \"score = 0\" instances")
+        save_figure_on_disk(fig, "score_box_plots_after_removing_0s.pdf")
+    plt.close('all')
+
 def preprocess_data():
     "Calls all the auxiliary functions that apply preprocessing techniques on the data"
     change_months_from_text_to_number() # Month is ordinal data in our context, so it makes more sense to use it as numbers instead of text(str)
@@ -229,11 +258,24 @@ def preprocess_data():
     # Removes some features to reduce the data's dimensionality
     features_to_be_removed = ["Name", "Number of characters in Original Name", "10th Completion Year", "12th Completion year", "Year of Completion of college"]
     remove_some_features(features_to_be_removed)
-    normalize_feature("10th percentage")
-    normalize_feature("12th percentage")
-    normalize_feature("College percentage")
     drop_instances_from_feature_containing_keyword("Performance", "MD")
-    
+    # Creates the boxplots and removes the outliers of the "scores"
+    plot_boxplot_on_scores("before")
+    features_to_remove_int = ["English 1", "English 2", "English 3", "English 4",
+    "Quantitative Ability 1", "Quantitative Ability 2", "Quantitative Ability 3", "Quantitative Ability 4",
+    "Domain Skills 1", "Domain Skills 2", "Domain Test 3", "Domain Test 4",
+    "Analytical Skills 1", "Analytical Skills 2", "Analytical Skills 3"]
+    for i in features_to_remove_int:
+        drop_instances_from_feature_containing_int(i, 0)
+    plot_boxplot_on_scores("after")
+    # Normalizes some numerical data
+    features_to_normalize = features_to_remove_int
+    features_to_normalize.append("10th percentage")
+    features_to_normalize.append("12th percentage")
+    features_to_normalize.append("College percentage")
+
+    for i in features_to_normalize:
+        normalize_feature(i)
     
 def main():
     pass
@@ -253,6 +295,7 @@ def main():
     # Preprocess the data
     preprocess_data()
     
+    # Example on how to consult statistics of the "score" features
     # a = data[["English 1", "English 2", "English 3", "English 4",
     # "Quantitative Ability 1", "Quantitative Ability 2", "Quantitative Ability 3", "Quantitative Ability 4",
     # "Domain Skills 1", "Domain Skills 2", "Domain Test 3", "Domain Test 4",
