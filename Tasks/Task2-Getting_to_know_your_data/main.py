@@ -236,10 +236,6 @@ def drop_instances_from_feature_containing_keyword(feature, keyword):
     global data # creates a "link" between the data var of this function and the data global var
     data = data[data[str(feature)].str.contains(str(keyword))==False] # gen the new data and updates the global var
 
-# def drop_instances_from_feature_containing_int(feature, number):
-#     global data # creates a "link" between the data var of this function and the data global var
-#     data = data[data[feature] != number]
-
 def preprocess_data():
     "Calls all the auxiliary functions that apply preprocessing techniques on the data"
     print("[INFO] Data preprocessing initiated...")
@@ -255,21 +251,13 @@ def preprocess_data():
     # Removes some features to reduce the data's dimensionality
     features_to_be_removed = ["Name", "Number of characters in Original Name", "10th Completion Year", "12th Completion year", "Year of Completion of college"]
     remove_some_features(features_to_be_removed)
-    # Creates the boxplots and removes the outliers of the "scores"
-    plot_boxplot_on_scores()
+    plot_boxplot_on_scores() # Creates the boxplots
+    # Normalizes some features
     features_to_normalize = ["English 1", "English 2", "English 3", "English 4",
     "Quantitative Ability 1", "Quantitative Ability 2", "Quantitative Ability 3", "Quantitative Ability 4",
     "Domain Skills 1", "Domain Skills 2", "Domain Test 3", "Domain Test 4",
     "Analytical Skills 1", "Analytical Skills 2", "Analytical Skills 3",
     "10th percentage", "12th percentage", "College percentage"]
-    # for i in features_to_remove_int:
-    #     drop_instances_from_feature_containing_int(i, 0)
-    # plot_boxplot_on_scores("after")
-    # Normalizes some numerical data
-    # features_to_normalize = features_to_remove_int
-    # features_to_normalize.append("10th percentage")
-    # features_to_normalize.append("12th percentage")
-    # features_to_normalize.append("College percentage")
     for i in features_to_normalize:
         normalize_feature(i)
     drop_instances_from_feature_containing_keyword("Performance", "MD")
