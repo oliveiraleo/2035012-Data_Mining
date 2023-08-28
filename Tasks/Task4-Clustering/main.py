@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 # from sklearn.datasets import make_blobs
@@ -15,7 +16,7 @@ from sklearn.preprocessing import MinMaxScaler
 # Global Vars #
 ###############
 data = [] # creates an empty list
-KMeans_clusters = 3
+KMeans_clusters = 7 # this value was calculated
 
 ##############################
 # Useful auxiliary functions #
@@ -63,6 +64,7 @@ def remove_performance_feature(dataset):
 def cluster_using_KMeans(input_data, num_clusters):
     # Preprocessing of the data
     sorted_data = input_data.sort_values(input_data.columns[0], ascending=True) # sort the data by Candidate ID...
+    candidate_ids = input_data["Candidate ID"]
     del sorted_data["Candidate ID"] # and then remove it so this feature doesn't influence the clustering
     # Apply some extra normalization
     features_to_be_normalized = ["Month of Birth", "Year of Birth", "10th and 12th Completion Years Diff"] # these are the features that weren't normalized before
@@ -70,19 +72,61 @@ def cluster_using_KMeans(input_data, num_clusters):
         normalize_feature(sorted_data, i)
     
     # Create some dummies from the nominal/categorical data and saves the result
-    data_with_dummies = pd.get_dummies(sorted_data, columns=['Gender','State (Location)','Degree of study','Specialization in study'], prefix=['gender','state','degree','specialization'])
+    data_with_dummies = pd.get_dummies(sorted_data, columns=['Gender','State (Location)','Degree of study','Specialization in study'], prefix=['gender','state','degree','specialization'], dtype=int)
     data_with_dummies.to_csv("./Tasks/Task4-Clustering/results/data-with-numerical-data-only.csv")
 
     # Configures and executes K-Means clustering
-    kmeans = KMeans(n_clusters = num_clusters, init="random", n_init=10, max_iter=300, random_state=42) # random_state was used to make the results determinist
-    kmeans.fit(data_with_dummies)
- 
-    print("--- K-means results BEGIN ---")
-    # print(kmeans.labels_)
-    print("Coordinates of the centroids:", kmeans.cluster_centers_) #DEBUG
-    print("Total # of iterations:", kmeans.n_iter_) #DEBUG
-    print("--- K-means results END ---")
+    # kmeans = KMeans(n_clusters = num_clusters, init="random", n_init=10, max_iter=300, random_state=42) # random_state was used to make the results determinist
+    # kmeans.fit(data_with_dummies)
+    # data_with_dummies["k-means labels"] = kmeans.labels_
 
+    # TODO Creates the vars necessary to record the clustering results
+    silhouette_coefficients = []
+    sse = []
+    range_num_of_clusters = range(2, 13)
+    # Notice you start at 2 clusters for silhouette coefficient
+    for k in range_num_of_clusters:
+        kmeans = KMeans(n_clusters = k, init="random", n_init=10, max_iter=300, random_state=42) # random_state was used to make the results determinist
+        kmeans.fit(data_with_dummies)
+        score = silhouette_score(data_with_dummies, kmeans.labels_)
+        silhouette_coefficients.append(score)
+        sse.append(kmeans.inertia_)
+
+    plt.plot(range_num_of_clusters, silhouette_coefficients, 'o-')
+    plt.grid(True, axis='y', linestyle=':')
+    plt.xticks(range_num_of_clusters)
+    s_numbers = np.unique(silhouette_coefficients)
+    s_numbers = np.delete(s_numbers, 6) # removes the index 6 value from array because of plot label's overlap
+    s_labels = np.sort(s_numbers)
+    s_labels_rounded = []
+    for i in s_labels:
+        s_labels_rounded.append(round(i, 4))
+    plt.yticks(s_numbers, labels=s_labels_rounded)
+    plt.xlabel("Number of Clusters")
+    plt.ylabel("Silhouette Coefficient")
+    plt.savefig("./Tasks/Task4-Clustering/results/silhouette-results.png")
+    plt.close('all')
+
+    plt.plot(range_num_of_clusters, sse, 'o-')
+    plt.grid(True, axis='y', linestyle=':')
+    sse_axis_labels = np.sort([round(sse[i]) for i in range(len(sse))]) # sorts the data in order to display it correctly on the plot
+    plt.yticks(np.unique(sse), labels=np.unique(sse_axis_labels))
+    plt.xticks(range_num_of_clusters)
+    plt.xlabel("Number of Clusters")
+    plt.ylabel("SSE")
+    plt.savefig("./Tasks/Task4-Clustering/results/elbow-results.png")
+
+    # TODO add a plot to show the clusters
+
+    # print("--- K-means results BEGIN ---")
+    # # print(kmeans.labels_)
+    # print("Coordinates of the centroids:", kmeans.cluster_centers_) #DEBUG
+    # print("Total # of iterations:", kmeans.n_iter_) #DEBUG
+    # print("# of itens on each cluster:", data_with_dummies["k-means labels"].value_counts())
+    # print("--- K-means results END ---")
+
+    # data_with_dummies.insert(0, "Candidate ID", candidate_ids, True) # adds the candidate ids feature back to the data set
+    # data_with_dummies.to_csv("./Tasks/Task4-Clustering/results/data-k_means-labels.csv")
 
 def main():
     global data # creates a "link" between the data var of this function and the data global var
