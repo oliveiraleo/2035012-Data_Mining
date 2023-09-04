@@ -20,6 +20,14 @@ import seaborn as sns
 import matplotlib.patheffects as path_effects
 # Plots End
 
+# DT Visulization Begin
+from sklearn.tree import export_graphviz
+# from sklearn.externals.six import StringIO
+from six import StringIO
+from IPython.display import Image
+import pydotplus
+# DT Visulization End
+
 from collections import Counter
 from imblearn.over_sampling import RandomOverSampler
 # import itertools as its
@@ -121,6 +129,13 @@ def plot_roc_curve(Y_test, model_probs, classifier_name):
     # plt.show() # DEBUG
     plt.close('all')
 
+def plot_decision_tree_graphviz(model, feature_names, class_names):
+    dot_data = StringIO()
+    export_graphviz(model, out_file=dot_data, filled=True, rounded=True, special_characters=True, feature_names=feature_names, class_names=class_names)
+    graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
+    # Image(graph.create_png())
+    graph.write_png('./Tasks/Task5-Classification/results/plots/tree_DecisionTreeClassifier.png')
+
 # Preprocessing aux functions
 
 def normalize_feature(data, feature_name):
@@ -167,15 +182,17 @@ def data_preprocessing(data):
     scaler = MinMaxScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # X_scaled, y = oversample_data(X_scaled, y) # apply an oversampling strategy on the data
+    X_scaled, y = oversample_data(X_scaled, y) # apply an oversampling strategy on the data
 
-    return X_scaled, y
+    X_feature_names = list(X.columns) # gets the features' names for the decision tree plot afterwards
+
+    return X_scaled, y, X_feature_names
 
 ###################
 # Other functions #
 ###################
 
-def classification(X, y, classif, it):
+def classification(X, y, classif, it, f_names):
     data_reports = []
     confusion_matrices = []
     probs = []
@@ -183,9 +200,9 @@ def classification(X, y, classif, it):
     for _ in range(it): #shuffe the data 30 times and get the data set split
         classifier = classif #Creates another instance of the classifier so there's no interference from the previous results
         # dataset split
-        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size = 0.7, shuffle = True) # Split proportion: 70% train, 30% test with shuffle on each iteration
+        # X_train, X_test, y_train, y_test = train_test_split(X, y, train_size = 0.7, shuffle = True) # Split proportion: 70% train, 30% test with shuffle on each iteration
         # apply stratification on the split
-        # X_train, X_test, y_train, y_test = train_test_split(X, y, train_size = 0.7, shuffle = True, stratify = y) # Split proportion: 70% train, 30% test with shuffle on each iteration
+        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size = 0.7, shuffle = True, stratify = y) # Split proportion: 70% train, 30% test with shuffle on each iteration
         
         classifier.fit(X_train, y_train)
         y_result = classifier.predict(X_test)
@@ -197,6 +214,10 @@ def classification(X, y, classif, it):
     # print("Probs:", probs) # DEBUG
     # print("Probs length:", len(probs)) # DEBUG
     plot_roc_curve(y_test, probs, classifier.__class__.__name__)
+
+    # only plot the DT if the classfier generates a DT
+    if classif.__class__.__name__ == "DecisionTreeClassifier":
+        plot_decision_tree_graphviz(classif, f_names, list(np.unique(y)))
 
     plot_confusion_matrice(confusion_matrices, classifier)
     #create_confusion_matrix(y_test, y_result,classifier) # creates a confusion matrix for the last iteration only
@@ -247,15 +268,15 @@ def main():
     print("[INFO] Starting the script")
     data = load_data()
     # print(data) # DEBUG
-    X, y = data_preprocessing(data)
-    classifiers = [DecisionTreeClassifier(),
+    X, y, data_feature_names = data_preprocessing(data)
+    classifiers = [DecisionTreeClassifier(min_samples_split=30, max_depth=5),
                    LogisticRegression(),
                    KNeighborsClassifier(),
                    GaussianNB()
                    ]
     errors = {}
     for classifier in classifiers:
-        errors[classifier.__class__.__name__] = classification(X, y, classifier, iterations)
+        errors[classifier.__class__.__name__] = classification(X, y, classifier, iterations, data_feature_names)
 
     print(json.dumps(errors, indent=4)) # DEBUG
     print("[INFO] Results saved locally and printed above. Execution done!")
