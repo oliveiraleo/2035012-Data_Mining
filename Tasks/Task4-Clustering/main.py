@@ -2,10 +2,15 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import OPTICS, cluster_optics_dbscan
 # from sklearn.datasets import make_blobs
 from sklearn.metrics import silhouette_score
 # from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
+import matplotlib.gridspec as gridspec
+from sklearn.decomposition import PCA
+import seaborn as sns
 
 ''' 
     That's the source code used on the Task 4
@@ -24,7 +29,7 @@ KMeans_clusters = 7 # this value was calculated
 def load_data():
     print("[INFO] Loading the input data... ", end='')
     data = pd.read_csv("./Tasks/Task4-Clustering/task4-data.csv")
-    # print(database_transactions) #DEBUG
+    # print(data) #DEBUG
     print("[ OK ]")
     return data
 
@@ -74,13 +79,16 @@ def cluster_using_KMeans(input_data, num_clusters):
     # Create some dummies from the nominal/categorical data and saves the result
     data_with_dummies = pd.get_dummies(sorted_data, columns=['Gender','State (Location)','Degree of study','Specialization in study'], prefix=['gender','state','degree','specialization'], dtype=int)
     data_with_dummies.to_csv("./Tasks/Task4-Clustering/results/data-with-numerical-data-only.csv")
+    print(data_with_dummies)
+    # TODO move all the code above to a separate function (preprocessing)
 
+    ### K-Means ###
     # Configures and executes K-Means clustering
     # kmeans = KMeans(n_clusters = num_clusters, init="random", n_init=10, max_iter=300, random_state=42) # random_state was used to make the results determinist
     # kmeans.fit(data_with_dummies)
     # data_with_dummies["k-means labels"] = kmeans.labels_
 
-    # TODO Creates the vars necessary to record the clustering results
+    # Creates the vars necessary to record the clustering results
     silhouette_coefficients = []
     sse = []
     range_num_of_clusters = range(2, 13)
@@ -115,8 +123,23 @@ def cluster_using_KMeans(input_data, num_clusters):
     plt.xlabel("Number of Clusters")
     plt.ylabel("SSE")
     plt.savefig("./Tasks/Task4-Clustering/results/elbow-results.png")
+    plt.close('all')
 
-    # TODO add a plot to show the clusters
+    # Plot to show the clusters with k = 7
+    clusters = silhouette_coefficients.index(max(silhouette_coefficients)) + 2
+    kmeans = KMeans(n_clusters=clusters, random_state=42, n_init=10)
+    y = kmeans.fit_predict(data_with_dummies)
+
+    reduced_data = PCA(n_components=2).fit_transform(data_with_dummies)
+    results = pd.DataFrame(reduced_data,columns=['pca1','pca2'])
+
+    sns.scatterplot(x="pca1", y="pca2", hue=y, palette='deep', data=results)
+    plt.xlabel("X dimension")
+    plt.ylabel("Y dimension")
+    plt.title('K-means Clustering with 2 dimensions')
+    plt.savefig("./Tasks/Task4-Clustering/results/k_means-results.png")
+    plt.close()
+    # plt.show() # DEBUG
 
     # print("--- K-means results BEGIN ---")
     # # print(kmeans.labels_)
@@ -127,6 +150,32 @@ def cluster_using_KMeans(input_data, num_clusters):
 
     # data_with_dummies.insert(0, "Candidate ID", candidate_ids, True) # adds the candidate ids feature back to the data set
     # data_with_dummies.to_csv("./Tasks/Task4-Clustering/results/data-k_means-labels.csv")
+
+    ### Agglomerative Clustering ###
+
+    # define the model
+    # model = AgglomerativeClustering(n_clusters=6, linkage="single")
+    # model = AgglomerativeClustering(n_clusters=6, linkage="average")
+    # model = AgglomerativeClustering(n_clusters=None, linkage="single", distance_threshold=2.0)
+    model = AgglomerativeClustering(n_clusters=None, distance_threshold=8.5)
+    # fit model and predict clusters
+    y = model.fit_predict(data_with_dummies)
+    # create scatter plot for samples from each cluster
+    # sns.scatterplot(x="pca1", y="pca2", hue=y, palette='deep', data=results)
+    data_with_dummies["Agglomerative labels"] = model.labels_
+    # plt.bar(y, data_with_dummies["Agglomerative labels"].value_counts())
+    b = data_with_dummies["Agglomerative labels"].value_counts()
+    plt.hist(data_with_dummies["Agglomerative labels"], bins=np.arange(len(b)+1) - 0.5, rwidth=0.7)
+    plt.grid(True, axis='y', linestyle=':')
+    plt.xlabel("Clusters")
+    plt.ylabel("# of instances on each cluster")
+    plt.yticks(np.unique(b), labels=np.unique(b))
+    plt.title('Agglomerative Clustering Results')
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig("./Tasks/Task4-Clustering/results/Agglomerative-results.pdf", dpi=300)
+    print("# of itens on each cluster:", b)
+
 
 def main():
     global data # creates a "link" between the data var of this function and the data global var
