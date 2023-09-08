@@ -39,20 +39,33 @@ def init_worker():
     ''' Add KeyboardInterrupt exception to mutliprocessing workers '''
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-def load_data():
+def join_data_files():
     data = [] # creates an empty list
     print("[INFO] Loading the input data... ", end='')
     files = glob("./Tasks/Task7-Results/Shanghai-Telcome-Six-Months-DataSet/*.xlsx")
     files.sort()
 
-    for f in files[:1]:
-        # df = pd.read_excel(f, decimal=",", nrows=1000)
+    for f in files[:]:
         df = pd.read_excel(f, decimal=",")
-        df = df.dropna()
+        df = df.dropna() # removes all the instances with empty data
         data.append(df)
     
     data = pd.concat(data, ignore_index=True)
-    # data.to_csv("./Tasks/Task7-Results/results/task7-data-complete.csv", index=False)
+    data.to_csv("./Tasks/Task7-Results/results/task7-data-complete.csv", index=False)
+
+    return data
+
+def load_data():
+    data = [] # creates an empty list
+    print("[INFO] Loading the input data... ", end='')
+    
+    # data = join_data_files() # Joins the data of the data set (executing this is only required once)
+
+    try:
+        data = pd.read_csv("./Tasks/Task7-Results/results/task7-data-complete.csv") # reads the full data set data
+    except FileNotFoundError:
+        print("[ FAIL ]")
+        print("[ERROR] Make sure to join the data first")
 
     # print(data) # DEBUG
     print("[ OK ]")
