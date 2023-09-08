@@ -72,17 +72,12 @@ def load_data():
     return data
 
 def preprocessing(data):
-    # remove those features as they can be extracted later from the timestamps
-    # del data["month"]
-    # del data["date"]
-    data.drop("start time", axis=1)
-    data.drop("end time", axis=1)
-    # split the 'month' feature to take the year
+    # splits the 'month' feature to get the year then removes it from the feature
     data["month"] = data["month"].astype(str)
     data["year"] = data["month"].str[:4].astype(int)
     data["month"] = data["month"].str[-2:].astype(int)
-    # data = data[["year", "month", "date", "latitude", "longitude", "user id"]]
-    data = data[["year", "month", "date", "user id"]]
+    # reorders the features on the df
+    data = data[["year", "month", "date", "latitude", "longitude", "user id"]]
 
     # remove the duplicated instances
     # print("Before: ", len(data)) # DEBUG
@@ -90,25 +85,18 @@ def preprocessing(data):
     # print("After:", len(data)) # DEBUG
 
     # counts the number of users per day on each antenna
-    # data_agg = data.groupby(["year", "month", "date", "latitude", "longitude"]).size().reset_index(name='count')
-    data_agg = data.groupby(["year", "month", "date"]).size().reset_index(name='count')
+    data_agg = df.groupby(["year", "month", "date", "latitude", "longitude"]).size().reset_index(name='count')
 
     # print(data_agg["count"].head(n=10)) # DEBUG
 
     # changes the index to a timestamp instead of a int
-    data_agg = data_agg.rename(columns={"date":"day"})
+    data_agg = data_agg.rename(columns={"date":"day"}) # renames the column to use the pd.to_datetime function
     data_agg["Timestamp"] = pd.to_datetime(data_agg[["year", "month", "day"]])
-    data_agg.set_index('Timestamp', inplace=True)
     data_agg = data_agg.drop(["year", "month", "day"], axis=1) # removes the old feature data
+    data_agg = data_agg[["data", "latitude", "longitude", "count"]]
     # print(data_agg.head(n=10)) # DEBUG
 
-    # normalize the dataset
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    data_scaled = scaler.fit_transform(data_agg)
-
-    # print(data_scaled)
-
-    return data_scaled
+    return data_agg
 
 def plot_number_users_for_each_antenna(data):
     for _, df in data.groupby(["latitude", "longitude"]):
