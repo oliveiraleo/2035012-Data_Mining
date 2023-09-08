@@ -194,21 +194,30 @@ def time_series_prediction(data):
 
 
 def main():
+    # creates some vars
     num_workers = 1
+    usage_days_threshold = 100
+    df_antenas=[]
 
-    data = load_data()
-    # data = preprocessing(data)
+    data = load_data() # loads the data set
+    data = preprocessing(data) # preprocess the data
     # plot_number_users_for_each_antenna(data)
     # time_series_prediction(data)
 
     for _, df in data.groupby(["latitude", "longitude"]):
-        df = df.drop(["latitude", "longitude"], axis=1)
-        df = preprocessing(df)
-        # print("Head:", df)
-        time_series_prediction(df)
+        # df = df.drop(["latitude", "longitude"], axis=1)
+        # df = preprocessing(df)
+        # # print("Head:", df)
+        # time_series_prediction(df)
+        
+        df_antenas.append(df.reset_index().drop(["index","latitude","longitude"],axis=1))
 
     # pool = multiprocessing.Pool(num_workers, init_worker)
     # pool.map(time_series_prediction, data)
+
+    for df in df_antenas[:]:
+        if len(df)> usage_days_threshold: # only takes the antenas with more than 'usage_days_threshold' usage days
+            timeseries(df.copy()) # sends the antena data to get a prediction
 
 # Calls the main functionality
 if __name__ == "__main__":
