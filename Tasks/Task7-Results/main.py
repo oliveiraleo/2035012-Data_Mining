@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import time
+import csv
 import warnings
 import matplotlib.pyplot as plt
 
@@ -11,7 +12,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import r2_score
-from sklearn.metrics import mean_absolute_percentage_error
 
 from statsmodels.tsa.ar_model import AutoReg
 from math import sqrt
@@ -161,25 +161,36 @@ def time_series_prediction(df, antenna_id):
          predictions.append(yhat)
          history.append(obs)
 
+    # calculates the statistical evaluation variables
     rmse = sqrt(mean_squared_error(test, predictions))
-    print("[INFO] RMSE: %.3f" % rmse)
+    r2 = r2_score(test, predictions)
+    mae = mean_absolute_error(test, predictions)
+    metrics = [rmse, r2, mae]
+    print("\n[INFO] Antenna %i stats" % antenna_id) # DEBUG
+    print("[INFO] RMSE: %.3f" % rmse) # DEBUG
+    print("[INFO] R2_Score: %.3f" % r2) # DEBUG
+    print("[INFO] MAE: %.3f" % mae) # DEBUG 
     # plot the results
     plt.plot(test)
     plt.plot(predictions, color='red')
-    # plt.plot(train, color='orange')
     
     xlabels = list(df.index)
     ylabels = np.arange(min(df["count"]), max(df["count"]))
 
     # plt.xticks(ticks=xlabels, labels=xlabels, rotation=35)
     # plt.yticks(ticks=ylabels, labels=ylabels)
+    plt.xticks(np.arange(0, len(predictions)+1, 5))
     plt.xlabel("Days (transformed to be continous)")
     plt.ylabel("Difference on the # of users")
-    plt.title("Usage pattern of connected users per day (antenna %i)" % antenna_id)
+    plt.title("Antenna %i: Usage pattern of connected users per day\n(RMSE / R2 / MAE: %f / %f / %f)" % (antenna_id, rmse, r2, mae))
     plt.legend(["Test data", "Predicted data"])
+    plt.grid(True, axis='y', linestyle='--')
     # plt.show() # DEBUG
     # print(a)
     plt.savefig("./Tasks/Task7-Results/results/plots/connected_users_per_day-antenna_%i.png" % antenna_id)
+    plt.close("all")
+    
+    return metrics
 
 
 def main():
@@ -201,35 +212,53 @@ def main():
 
     start_time3 = time.time()
     for _, df in data.groupby(["latitude", "longitude"]):
-        # df = df.drop(["latitude", "longitude"], axis=1)
-        # df = preprocessing(df)
-        # # print("Head:", df)
-        # time_series_prediction(df)
-        
         df_antenas.append(df.reset_index().drop(["index","latitude","longitude"],axis=1))
-    df=df_antenas[122]
     end_time3 = time.time()
 
     # pool = multiprocessing.Pool(num_workers, init_worker)
     # pool.map(time_series_prediction, data)
 
     antenna_number = 0
+    df_stats_columns = ["antenna_id", "rmse", "r2_score", "mae"]
+    statistical_metrics = pd.DataFrame(columns=df_stats_columns)
     start_time4 = time.time()
-    for df in df_antenas[:]:
+    for df in df_antenas[:10]:
         if len(df)> usage_days_threshold: # only takes the antenas with more than 'usage_days_threshold' usage days
-            time_series_prediction(df.copy(), antenna_number) # sends the antena data to get a prediction
+            metrics_of_each_antenna = time_series_prediction(df.copy(), antenna_number)
+            new_data = [antenna_number] + list(metrics_of_each_antenna)
+            statistical_metrics.loc[len(statistical_metrics)] = new_data
+        antenna_number += 1
+    statistical_metrics["antenna_id"] = statistical_metrics["antenna_id"].astype(int)
+    statistical_metrics.set_index("antenna_id", inplace=True)
+    statistical_metrics.to_csv("./Tasks/Task7-Results/results/statistical_metrics.csv")
     end_time4 = time.time()
 
     time_loading = datetime.timedelta(seconds=end_time1 - start_time1)
     time_preprocessing = datetime.timedelta(seconds=end_time2 - start_time2)
     time_grouping = datetime.timedelta(seconds=end_time3 - start_time3)
     time_tp = datetime.timedelta(seconds=end_time4 - start_time4)
+    time_total = time_loading + time_preprocessing + time_grouping + time_tp
 
+    print("\n[INFO] Total exec time statistics") # DEBUG
     print("[INFO] Time spent loading data (h:mm:ss): ", time_loading)
     print("[INFO] Time spent preprocessing data (h:mm:ss): ", time_preprocessing)
     print("[INFO] Time spent grouping the antennas (h:mm:ss): ", time_grouping)
     print("[INFO] Time spent training and predicting (h:mm:ss): ", time_tp)
-    print("[INFO] Total exec time (h:mm:ss): ", time_loading + time_preprocessing + time_grouping + time_tp)
+    print("[INFO] Total exec time (h:mm:ss): ", time_total)
+    
+    stats_exec_time_header = ["loading", "processing", "grouping", "predicting", "total"]
+    exec_time_list = [time_loading, time_preprocessing, time_grouping, time_tp, time_total]
+    # df_exec_time = pd.DataFrame(exec_time_dict)
+    # df_exec_time.to_csv("./Tasks/Task7-Results/results/execution_time_in_seconds.csv")
+
+    with open('./Tasks/Task7-Results/results/execution_time_in_seconds.csv', 'w') as f:
+     
+        # using csv.writer method from CSV package
+        write = csv.writer(f)
+        
+        write.writerow(stats_exec_time_header)
+        write.writerow(exec_time_list)
+        # write.writerows(rows)
 
 # Calls the main functionality
 if __name__ == "__main__":
