@@ -1,28 +1,37 @@
 from glob import glob
 import pandas as pd
+import numpy as np
 import datetime
 import time
 import warnings
 import matplotlib.pyplot as plt
 
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
-
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import LSTM
-from keras.callbacks import EarlyStopping
+# from sklearn.preprocessing import MinMaxScaler
+# from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import r2_score
+from sklearn.metrics import mean_absolute_percentage_error
 
-import signal
-import multiprocessing
+from statsmodels.tsa.ar_model import AutoReg
+from math import sqrt
 
-import os
-os.environ['MKL_NUM_THREADS'] = '10'
-os.environ['GOTO_NUM_THREADS'] = '10'
-os.environ['OMP_NUM_THREADS'] = '10'
-os.environ['openmp'] = 'True'
+# import tensorflow as tf
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import Dense
+# from tensorflow.keras.layers import LSTM
+# from keras.callbacks import EarlyStopping
+# from sklearn.metrics import r2_score
+
+# TODO check the possibility to activate parallel processing
+# import signal
+# import multiprocessing
+
+# import os
+# os.environ['MKL_NUM_THREADS'] = '10'
+# os.environ['GOTO_NUM_THREADS'] = '10'
+# os.environ['OMP_NUM_THREADS'] = '10'
+# os.environ['openmp'] = 'True'
 
 warnings.filterwarnings("ignore") # Disables warnings
 
@@ -30,18 +39,17 @@ warnings.filterwarnings("ignore") # Disables warnings
 # Global Vars #
 ###############
 # data = [] # creates an empty list
-tf.random.set_seed(7)
+# tf.random.set_seed(7)
 
 ##############################
 # Useful auxiliary functions #
 ##############################
-def init_worker():
-    ''' Add KeyboardInterrupt exception to mutliprocessing workers '''
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+# def init_worker():
+#     ''' Add KeyboardInterrupt exception to mutliprocessing workers '''
+#     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 def join_data_files():
     data = [] # creates an empty list
-    print("[INFO] Loading the input data... ", end='')
     files = glob("./Tasks/Task7-Results/Shanghai-Telcome-Six-Months-DataSet/*.xlsx")
     files.sort()
 
@@ -63,12 +71,12 @@ def load_data():
 
     try:
         data = pd.read_csv("./Tasks/Task7-Results/results/task7-data-complete.csv") # reads the full data set data
+        print("[ OK ]")
     except FileNotFoundError:
         print("[ FAIL ]")
         print("[ERROR] Make sure to join the data first")
 
     # print(data) # DEBUG
-    print("[ OK ]")
     return data
 
 def preprocessing(data):
@@ -85,20 +93,19 @@ def preprocessing(data):
     # print("After:", len(data)) # DEBUG
 
     # counts the number of users per day on each antenna
-    data_agg = df.groupby(["year", "month", "date", "latitude", "longitude"]).size().reset_index(name='count')
-
+    data_agg = data.groupby(["year", "month", "date", "latitude", "longitude"]).size().reset_index(name='count')
     # print(data_agg["count"].head(n=10)) # DEBUG
 
-    # changes the index to a timestamp instead of a int
+    # creates a timestamp as a feature then drop the int type ones
     data_agg = data_agg.rename(columns={"date":"day"}) # renames the column to use the pd.to_datetime function
-    data_agg["Timestamp"] = pd.to_datetime(data_agg[["year", "month", "day"]])
+    data_agg["timestamp"] = pd.to_datetime(data_agg[["year", "month", "day"]])
     data_agg = data_agg.drop(["year", "month", "day"], axis=1) # removes the old feature data
-    data_agg = data_agg[["data", "latitude", "longitude", "count"]]
+    data_agg = data_agg[["timestamp", "latitude", "longitude", "count"]]
     # print(data_agg.head(n=10)) # DEBUG
 
     return data_agg
 
-def plot_number_users_for_each_antenna(data):
+def plot_number_users_for_each_antenna(data): # TODO check this function here
     for _, df in data.groupby(["latitude", "longitude"]):
         df = df.reset_index()
         print(df.head(n=30))
@@ -113,84 +120,66 @@ def plot_number_users_for_each_antenna(data):
         plt.xticks(rotation=45)
         plt.show()
 
-def time_series_prediction(data):
-    # print("Data:", data)
+def time_series_prediction(df, antenna_id):
+    def difference(dataset):
+         diff = list()
+         for i in range(1, len(dataset)):
+             value = dataset[i] - dataset[i - 1]
+             diff.append(value)
+         return np.array(diff)
+     
+     
+    def predict(coef, history):
+         yhat = coef[0]
+         for i in range(1, len(coef)):
+             yhat += coef[i] * history[-i]
+         return yhat
 
-    # split into train and test sets
-    train_size = int(len(data) * 0.7) # 70% train
-    test_size = len(data) - train_size # 30% test
+    # changes the index to a timestamp instead of a int
+    df.set_index('timestamp', inplace=True)
+    # normalize the dataset
+    # scaler = MinMaxScaler(feature_range=(0, 1))
+    # df = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
 
-    train, test = data[0:train_size,:], data[train_size:len(data),:]
-    # X_train, X_test, y_train, y_test = train_test_split(data[["latitude", "longitude"]], data["count"], test_size=0.3, shuffle=False) 
-    # def create_sequences(data, seq_length):
-    #     sequences = []
-    #     for i in range(len(data) - seq_length):
-    #         seq = data[i:i + seq_length]
-    #         sequences.append(seq)
-    #     return np.array(sequences) 
-    # X_train = create_sequences(X_train, 10)
-    # X_test = create_sequences(X_test, 10)
-
-    X_train = train[:,:2]
-    X_test = test[:,:2]
-
-    # print("X_train: ", X_train)
-    # X_train = X_train.reshape((len(X_train), 1, 2))
-    # X_test = X_test.reshape((len(X_test), 1, 2))
-    X_train = X_train.reshape((X_train.shape[0], 1, X_train.shape[1]))
-    X_test = X_test.reshape((X_test.shape[0], 1, X_test.shape[1]))
-
-    # y_train = train[:,2]
-    # y_test = test[:,2]
-    y_train = train[:,0]
-    y_test = test[:,0]
-
-
-    model = Sequential()
-
-    batch_size=2**4
-    epochs = 20
-    patience = 50
+    # print("Df preview:\n", df.head(20)) # DEBUG
+    X = difference(df.values) # apply a differentiation on the values
+    # X = df.values
+    size = int(len(X) * 0.7) # calculates the train size using 70% of the data set
+    train, test = X[0:size], X[size:] # splits the data set in train and test data
     
-    es = EarlyStopping(monitor='val_loss',
-                       mode='min',
-                       verbose=1,
-                       patience=patience)
-
-    # TODO tentar paralelizar o LSTM tbm
-    # model.add(LSTM(4, input_shape=(len(X_train), 2)))
-    model.add(LSTM(16, input_shape=(X_train.shape[1], X_train.shape[2]), activation='relu'))
-    # model.add(LSTM(4, input_shape=(None, 2)))
-    # model.add(LSTM(4, input_shape=(None, 2)))
-    model.add(Dense(1))
-    model.compile(loss='mean_squared_error', optimizer='adam')
-    # model.fit(X_train, y_train, epochs=100, batch_size=10, verbose=1)
-    fit = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=1, callbacks=[es], validation_data=(X_test, y_test))
-    # fit = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=1, validation_data=(X_test, y_test))
-    # score = model.evaluate(X_test, y_test)
-    pred = model.predict(X_test)
-
-    score = r2_score(y_test, pred)
-    print('R2:', round(score,4))
-
-    print(score)
-
-    # plt.plot(fit.history['loss'], label='treino')
-    # plt.plot(fit.history['val_loss'], label='teste')
-    # plt.legend()
-    # plt.xlabel('Epocas')
-    # plt.ylabel("MSE")
-    # plt.savefig('fit.png',bbox_inches='tight',dpi=500)
-    # plt.savefig('fit.svg',bbox_inches='tight')
+    # trains autoregression model
+    model = AutoReg(train, lags=6)
+    model_fit = model.fit()
+    coef = model_fit.params
+    # walk forward over time steps in test (i.e. predicts the data series for the train's data amount of time)
+    history = [train[i] for i in range(len(train))]
+    predictions = list()
     
-    # plt.plot(y_test, y_test, 'r-')
-    # plt.plot(y_test, pred, 'ko')
-    # plt.xlabel('Epocas')
-    # plt.ylabel("MSE")
+    for t in range(len(test)):
+         yhat = predict(coef, history)
+         obs = test[t]
+         predictions.append(yhat)
+         history.append(obs)
+
+    rmse = sqrt(mean_squared_error(test, predictions))
+    print("[INFO] RMSE: %.3f" % rmse)
+    # plot the results
+    plt.plot(test)
+    plt.plot(predictions, color='red')
+    # plt.plot(train, color='orange')
     
-    plt.show()
-    
-    return pred
+    xlabels = list(df.index)
+    ylabels = np.arange(min(df["count"]), max(df["count"]))
+
+    # plt.xticks(ticks=xlabels, labels=xlabels, rotation=35)
+    # plt.yticks(ticks=ylabels, labels=ylabels)
+    plt.xlabel("Days (transformed to be continous)")
+    plt.ylabel("Difference on the # of users")
+    plt.title("Usage pattern of connected users per day (antenna %i)" % antenna_id)
+    plt.legend(["Test data", "Predicted data"])
+    # plt.show() # DEBUG
+    # print(a)
+    plt.savefig("./Tasks/Task7-Results/results/plots/connected_users_per_day-antenna_%i.png" % antenna_id)
 
 
 def main():
@@ -199,11 +188,18 @@ def main():
     usage_days_threshold = 100
     df_antenas=[]
 
+    start_time1 = time.time()
     data = load_data() # loads the data set
+    end_time1 = time.time()
+    
+    start_time2 = time.time()
     data = preprocessing(data) # preprocess the data
+    end_time2 = time.time()
+    
     # plot_number_users_for_each_antenna(data)
     # time_series_prediction(data)
 
+    start_time3 = time.time()
     for _, df in data.groupby(["latitude", "longitude"]):
         # df = df.drop(["latitude", "longitude"], axis=1)
         # df = preprocessing(df)
@@ -211,13 +207,29 @@ def main():
         # time_series_prediction(df)
         
         df_antenas.append(df.reset_index().drop(["index","latitude","longitude"],axis=1))
+    df=df_antenas[122]
+    end_time3 = time.time()
 
     # pool = multiprocessing.Pool(num_workers, init_worker)
     # pool.map(time_series_prediction, data)
 
+    antenna_number = 0
+    start_time4 = time.time()
     for df in df_antenas[:]:
         if len(df)> usage_days_threshold: # only takes the antenas with more than 'usage_days_threshold' usage days
-            timeseries(df.copy()) # sends the antena data to get a prediction
+            time_series_prediction(df.copy(), antenna_number) # sends the antena data to get a prediction
+    end_time4 = time.time()
+
+    time_loading = datetime.timedelta(seconds=end_time1 - start_time1)
+    time_preprocessing = datetime.timedelta(seconds=end_time2 - start_time2)
+    time_grouping = datetime.timedelta(seconds=end_time3 - start_time3)
+    time_tp = datetime.timedelta(seconds=end_time4 - start_time4)
+
+    print("[INFO] Time spent loading data (h:mm:ss): ", time_loading)
+    print("[INFO] Time spent preprocessing data (h:mm:ss): ", time_preprocessing)
+    print("[INFO] Time spent grouping the antennas (h:mm:ss): ", time_grouping)
+    print("[INFO] Time spent training and predicting (h:mm:ss): ", time_tp)
+    print("[INFO] Total exec time (h:mm:ss): ", time_loading + time_preprocessing + time_grouping + time_tp)
 
 # Calls the main functionality
 if __name__ == "__main__":
